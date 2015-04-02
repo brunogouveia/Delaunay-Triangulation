@@ -3,6 +3,8 @@ package sequential.structures;
 import java.util.HashSet;
 import java.util.Iterator;
 
+import javax.print.attribute.Size2DSyntax;
+
 import sequential.geometry.Edge;
 import sequential.geometry.Point;
 import sequential.geometry.Triangle;
@@ -20,12 +22,18 @@ public class TriangleTree {
 		root = new Node(t);
 	}
 
-	public void insert(int prIndex) {
+	public void insert(int prIndex) throws Exception {
 		// TODO - this is obviously just for test
 		// Find triangles that contain point p
 		Point p = Triangle.pointsVector.elementAt(prIndex);
 
-		Node[] nodes = testPoint(p);
+		HashSet<Node> hs = testPoint(p);
+		Node[] nodes = new Node[hs.size()];
+		int i = 0;
+		for (Iterator iterator = hs.iterator(); iterator.hasNext();) {
+			Node node = (Node) iterator.next();
+			nodes[i++] = node;
+		}
 
 		// If it's inside a triangle
 		if (nodes.length == 1) {
@@ -38,7 +46,7 @@ public class TriangleTree {
 			legalizeEdge(prIndex, new Edge(nodes[0].triangle.points[2], nodes[0].triangle.points[0]));
 		}
 		// It lies on and edge, so we need to do some work here
-		else {
+		else if (nodes.length == 2) {
 			// Get common edge
 			Edge commonEdge = nodes[0].triangle.commonEdge(nodes[1].triangle);
 			int piIndex = commonEdge.points[0];
@@ -68,6 +76,8 @@ public class TriangleTree {
 			legalizeEdge(prIndex, new Edge(pjIndex, pkIndex));
 			legalizeEdge(prIndex, new Edge(pkIndex, piIndex));
 
+		} else {
+			throw new Exception("Insert");
 		}
 	}
 
@@ -75,23 +85,39 @@ public class TriangleTree {
 	 * Print all triangles
 	 */
 	public void printTriangles() {
-		// Print points
-		int i = 0;
-		System.out.println(Triangle.pointsVector.size() + "\t" + 2 + "\t" + 0 + "\t" + 0);
-		for (Point point : Triangle.pointsVector) {
-			point.print(i++);
+		// Print points (but not the first three ones, because they are not int
+		// the
+		// original triangulation)
+		System.out.println("#.node file");
+		System.out.println((Triangle.pointsVector.size() - 3) + "\t2\t0\t0");
+
+		for (int i = 3; i < Triangle.pointsVector.size(); i++) {
+			Triangle.pointsVector.elementAt(i).print(i - 3);
 		}
+		// Print some blank lines
+		System.out.println("\n\n");
 
 		// Get all triangles that are currently in the triangulation
 		HashSet<Triangle> triangles = new HashSet<Triangle>();
 		printTriangles(root, triangles);
+
+		// Print header
+		System.out.println("#.ele file");
+		System.out.println(triangles.size() + "\t3\t0");
 		
-		i = 0;
+		int i = 0;
+		// Prin each triangle
 		for (Triangle triangle : triangles) {
 			triangle.print(i++);
 		}
 	}
 
+	/**
+	 * Method used in printTriangles
+	 * 
+	 * @param n
+	 * @param triangles
+	 */
 	private void printTriangles(Node n, HashSet<Triangle> triangles) {
 		// Check if n is not null
 		if (n == null)
@@ -121,6 +147,7 @@ public class TriangleTree {
 	public void legalizeEdge(int prIndex, Edge edge) {
 		// Find the triangles that edge is incident
 		HashSet<Node> hs = lookUp(edge);
+
 		Node[] nodes = new Node[hs.size()];
 
 		int i = 0;
@@ -130,14 +157,13 @@ public class TriangleTree {
 		}
 
 		// If length is 1, then this edge is in the edge of the first triangle
-		if (nodes == null) {
-			// edge.getMiddlePoint().print(1);
-			// Triangle.pointsVector.elementAt(edge.points[0]).print(2);
-			// Triangle.pointsVector.elementAt(edge.points[1]).print(3);
-			return;
-		}
 		if (nodes.length == 1)
 			return;
+		if (nodes.length == 0) {
+			System.out.println(edge.points[0]);
+			System.out.println(edge.points[1]);
+			printTriangles();
+		}
 
 		// Compute the opposite vertex
 		int pkIndex = (nodes[0].triangle.getOtherPoint(edge) != prIndex) ? nodes[0].triangle.getOtherPoint(edge) : nodes[1].triangle.getOtherPoint(edge);
@@ -208,18 +234,21 @@ public class TriangleTree {
 	 * @param p
 	 * @return
 	 */
-	public Node[] testPoint(Point p) {
+	public HashSet<Node> testPoint(Point p) {
 		// Search triangles
-		Node[] result = testPoint(p, root, null);
+		HashSet<Node> result = new HashSet<Node>();
+
+		// Find triangles
+		testPoint(p, root, result);
 
 		// Return result
 		return result;
 	}
 
-	protected Node[] testPoint(Point p, Node node, Node[] result) {
+	protected void testPoint(Point p, Node node, HashSet<Node> result) {
 		// If node is null, just return
 		if (node == null)
-			return result;
+			return;
 
 		// Test if point lies in the curent triangle
 		if (node.triangle.isPointInside(p)) {
@@ -228,28 +257,16 @@ public class TriangleTree {
 				// Then this triangle is currently in the mesh, and the point
 				// lies on it,
 				// So we need to add this triangle to the result
-				if (result == null) {
-					result = new Node[1];
-					result[0] = node;
-				} else if (result.length == 1) {
-					Node[] newResult = new Node[2];
-					newResult[0] = result[0];
-					newResult[1] = node;
-					result = newResult;
-				} else {
-					System.out.println("Error in TriangleTree - testPoint");
-				}
+				result.add(node);
 			} else {
 				// The current node holds a triangle that were in the mesh, but
 				// it's not anymore
 				// So, we need to call recursively its children.
 				for (Node child : node.children) {
-					result = testPoint(p, child, result);
+					testPoint(p, child, result);
 				}
 			}
 		}
-		// Return
-		return result;
 	}
 }
 

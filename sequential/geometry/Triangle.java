@@ -144,6 +144,6 @@ public class Triangle {
 	 * Print the coordinates of the three points
 	 */
 	public void print(int index) {
-		System.out.println(index + "\t" + points[0] + "\t" + points[1] + "\t" + points[2]);
+		System.out.println(index + "\t" + (points[0] - 3) + "\t" + (points[1] - 3) + "\t" + (points[2] - 3));
 	}
 }
