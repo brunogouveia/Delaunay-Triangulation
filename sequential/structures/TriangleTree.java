@@ -30,7 +30,7 @@ public class TriangleTree {
 		// If it's inside a triangle
 		if (nodes.length == 1) {
 			// Split node
-			splitNode(nodes[0], prIndex);
+			nodes[0].splitNode(prIndex);
 
 			// Check if it's still a delaunay triangulation
 			legalizeEdge(prIndex, new Edge(nodes[0].triangle.points[0], nodes[0].triangle.points[1]));
@@ -72,58 +72,42 @@ public class TriangleTree {
 	}
 
 	/**
-	 * Given a point P that is in the triangle, this method split this node in
-	 * three new nodes.
-	 * 
-	 * @param node
-	 * @param p
-	 */
-	private void splitNode(Node node, int prIndex) {
-		// Allocate children
-		node.children = new Node[3];
-
-		// Set points
-		int[] points = node.triangle.points;
-
-		// Compute new triangles and add to children
-		node.children[0] = new Node(new Triangle(points[0], points[1], prIndex));
-		node.children[1] = new Node(new Triangle(points[1], points[2], prIndex));
-		node.children[2] = new Node(new Triangle(points[2], points[0], prIndex));
-	}
-
-	/**
 	 * Print all triangles
 	 */
 	public void printTriangles() {
 		// Print points
 		int i = 0;
-		System.out.println(Triangle.pointsVector.size() + "\t" + 2 + "\t" + 2);
+		System.out.println(Triangle.pointsVector.size() + "\t" + 2 + "\t" + 0 + "\t" + 0);
 		for (Point point : Triangle.pointsVector) {
 			point.print(i++);
 		}
 
-		printTriangles(root, 0);
+		// Get all triangles that are currently in the triangulation
+		HashSet<Triangle> triangles = new HashSet<Triangle>();
+		printTriangles(root, triangles);
+		
+		i = 0;
+		for (Triangle triangle : triangles) {
+			triangle.print(i++);
+		}
 	}
 
-	private int printTriangles(Node n, int trianglesPrinted) {
+	private void printTriangles(Node n, HashSet<Triangle> triangles) {
 		// Check if n is not null
 		if (n == null)
-			return trianglesPrinted;
+			return;
 
 		// Check if it's leaf
 		if (n.children == null) {
 			// Print triangle coordinates
 			if ((n.triangle.points[0] > 2) && (n.triangle.points[1] > 2) && (n.triangle.points[2] > 2))
-				n.triangle.print(trianglesPrinted++);
+				triangles.add(n.triangle);
 		} else {
 			// Just call recursively.
 			for (Node child : n.children) {
-				trianglesPrinted = printTriangles(child, trianglesPrinted);
+				printTriangles(child, triangles);
 			}
 		}
-
-		// Return new trianglesPrinted value
-		return trianglesPrinted;
 	}
 
 	/**
@@ -275,5 +259,25 @@ class Node {
 
 	public Node(Triangle t) {
 		triangle = t;
+	}
+
+	/**
+	 * Given a point P that is in the triangle, this method split this node in
+	 * three new nodes.
+	 * 
+	 * @param prIndex
+	 *            = index of P
+	 */
+	public void splitNode(int prIndex) {
+		// Allocate children
+		children = new Node[3];
+
+		// Set points
+		int[] points = triangle.points;
+
+		// Compute new triangles and add to children
+		children[0] = new Node(new Triangle(points[0], points[1], prIndex));
+		children[1] = new Node(new Triangle(points[1], points[2], prIndex));
+		children[2] = new Node(new Triangle(points[2], points[0], prIndex));
 	}
 }
